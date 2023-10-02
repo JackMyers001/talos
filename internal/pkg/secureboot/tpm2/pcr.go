@@ -166,12 +166,10 @@ func validatePCRBanks(t transport.TPM) error {
 	for _, s := range assignedPCRs.PCRSelections {
 		h, err := s.Hash.Hash()
 		if err != nil {
-			return fmt.Errorf("failed to parse hash algorithm: %v", err)
+			continue
 		}
 
 		switch h { //nolint:exhaustive
-		case crypto.SHA1:
-			continue
 		case crypto.SHA256:
 			// check if 24 banks are available
 			if len(s.PCRSelect) != 24/8 {
@@ -182,16 +180,15 @@ func validatePCRBanks(t transport.TPM) error {
 			if s.PCRSelect[0] != 0xff || s.PCRSelect[1] != 0xff || s.PCRSelect[2] != 0xff {
 				return fmt.Errorf("unexpected PCR banks: %v", s.PCRSelect)
 			}
-		case crypto.SHA384:
-			continue
-		case crypto.SHA512:
-			continue
+
+			// found a valid PCR
+			return nil
 		default:
-			return fmt.Errorf("unsupported hash algorithm: %s", h.String())
+			continue
 		}
 	}
 
-	return nil
+	return fmt.Errorf("unable to find a supported PCR")
 }
 
 func validatePCRNotZeroAndNotFilled(pcrValue []byte, pcr int) error {
